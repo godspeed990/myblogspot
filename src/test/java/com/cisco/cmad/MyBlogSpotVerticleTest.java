@@ -22,7 +22,7 @@ public class MyBlogSpotVerticleTest {
 
     Vertx vertx;
     String name;
-    public static final int PORT=8080;
+    public static final int PORT=8999;
     public static final String HOST="localhost";
     public static final String USERNAME="admin";
     public static final String PASSWORD="admin";

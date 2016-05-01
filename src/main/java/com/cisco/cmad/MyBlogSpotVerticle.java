@@ -64,10 +64,14 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 	    router.route().handler(UserSessionHandler.create(authProvider));	
 		
 	    AuthHandler basicAuthHandler = BasicAuthHandler.create(authProvider);
+	    
+	    //Add the basic auth handler to all but the registration and login pages
 	    router.route("/Services/rest/company/*").handler(basicAuthHandler);
 	    router.route("/Services/rest/user").handler(basicAuthHandler);
 	    router.route("/Services/rest/blogs").handler(basicAuthHandler);
 	    router.route("/Services/rest/user/auth").handler(basicAuthHandler);
+	    
+	    
 		router.get("/Services/rest/company/:companyId/sites").handler(this::handleGetSitesOfCompany);
 		router.get("/Services/rest/company/:companyId/sites/:siteId/departments").handler(this::handleGetDepartmentsOfSite);
 		router.post("/Services/rest/user/register").handler(this::handlePerformRegistration);
@@ -79,7 +83,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 		
 		router.route().handler(StaticHandler.create()::handle);
 		HttpServerOptions serverOptions = new HttpServerOptions().setSsl(true);
-		vertx.createHttpServer().requestHandler(router::accept).listen(8080);	
+		vertx.createHttpServer().requestHandler(router::accept).listen(8999);	
 		
 		//configureMongoClient();
 		
