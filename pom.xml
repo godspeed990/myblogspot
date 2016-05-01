@@ -8,7 +8,7 @@
     <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
-      <version>3.0.0</version>
+      <version>3.2.1</version>
     </dependency>
     <dependency>
 		<groupId>io.vertx</groupId>
@@ -36,6 +36,26 @@
 		<groupId>org.mongodb.morphia</groupId>
 		<artifactId>morphia</artifactId>
 		<version>1.0.0-rc0</version>
+	</dependency>
+	<dependency>
+  		<groupId>io.vertx</groupId>
+  		<artifactId>vertx-auth-shiro</artifactId>
+  		<version>3.2.1</version>
+	</dependency>
+	<dependency>
+      	<groupId>org.slf4j</groupId>
+      	<artifactId>slf4j-api</artifactId>
+      	<version>1.7.21</version>
+    </dependency>
+    <dependency>
+  		<groupId>io.vertx</groupId>
+  		<artifactId>vertx-mongo-client</artifactId>
+  		<version>3.2.1</version>
+	</dependency>
+    <dependency>
+  		<groupId>io.vertx</groupId>
+  		<artifactId>vertx-auth-mongo</artifactId>
+  		<version>3.2.1</version>
 	</dependency>
   </dependencies>
 
