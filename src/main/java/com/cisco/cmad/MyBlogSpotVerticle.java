@@ -8,7 +8,6 @@ import java.nio.charset.Charset;
 import org.apache.shiro.codec.Base64;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
-import de.flapdoodle.embed.mongo.MongodProcess;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
