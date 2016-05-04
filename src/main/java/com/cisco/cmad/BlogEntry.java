@@ -1,6 +1,8 @@
 package com.cisco.cmad;
 
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -22,13 +24,13 @@ public class BlogEntry {
 	private String title;
 	private ArrayList<String> tags = new ArrayList<String>();
 	private BlogUsers user;
-	private Date date = new Date();
+	private String date ;
 	private String type;
-	
+	DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 	@Reference
 	private ArrayList<BlogEntry> comment= new ArrayList<BlogEntry>();
 	
-	@PrePersist void prePersist() {date = new Date();}
+	@PrePersist void prePersist() {date = dateFormat.format(new Date());}
 	public BlogEntry(String content, String tags,String title, BlogUsers user, String type) {
 		super();
 		this.content = content;
@@ -37,6 +39,7 @@ public class BlogEntry {
 		this.tags.addAll(temp);
 		this.user = user;
 		this.type = type;
+		this.date = dateFormat.format(new Date());
 	}
 	public BlogEntry(String content,  String tags,String title, BlogUsers user, Date date, String type, BlogEntry comment) {
 		super();
@@ -48,6 +51,7 @@ public class BlogEntry {
 		this.tags.addAll(temp);
 		this.type = type;
 		this.comment.add(comment);
+		this.date = dateFormat.format(new Date());
 	}
 	public String getId() {
 		return id;
@@ -79,7 +83,7 @@ public class BlogEntry {
 	public void setUser(BlogUsers user) {
 		this.user = user;
 	}
-	public Date getDate() {
+	public String getDate() {
 		return date;
 	}
 	public String getType() {
@@ -120,7 +124,7 @@ public class BlogEntry {
 	    .put("title",this.title)
 	    .put("user",user.toJson())
 	    .put("type", this.type)
-	    .put("date",this.date.toString())
+	    .put("date",this.date)
 	    .put("comment",commenttoJsonArray() )	    
 	    ;
 		return json;
@@ -134,7 +138,7 @@ public class BlogEntry {
 		this.title = js.getString("title");
 		this.user = new BlogUsers(js.getJsonObject("user"));
 		this.type = js.getString("type");
-		this.date = (Date)js.getValue("date");
+		this.date = js.getString("date");
 		JsonArray arr = js.getJsonArray("comment");
 		for (int i =0;i<arr.size();i++){
 		this.comment.add(new BlogEntry(arr.getJsonObject(i)));
