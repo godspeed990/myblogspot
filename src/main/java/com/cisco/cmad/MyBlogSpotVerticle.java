@@ -1,8 +1,10 @@
 package com.cisco.cmad;
 
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 
 import org.apache.shiro.codec.Base64;
@@ -20,7 +22,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.AuthProvider;
 import io.vertx.ext.auth.User;
-
+import io.vertx.ext.auth.shiro.PropertiesProviderConstants;
 import io.vertx.ext.auth.shiro.ShiroAuth;
 import io.vertx.ext.auth.shiro.ShiroAuthRealmType;
 import io.vertx.ext.mongo.MongoClient;
@@ -70,26 +72,26 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 
 	    // Simple auth service which uses a properties file for user/role info
 	    authProvider = ShiroAuth.create(vertx, ShiroAuthRealmType.PROPERTIES, new JsonObject());
+	
 	    // We need a user session handler too to make sure the user is stored in the session between requests
 	    router.route().handler(UserSessionHandler.create(authProvider));	
 	    AuthHandler basicAuthHandler = BasicAuthHandler.create(authProvider);
 	    
-	    router.route("/Services/rest/company/*").handler(basicAuthHandler);
+	 //   router.route("/Services/rest/company/*").handler(basicAuthHandler);
 	    router.route("/Services/rest/user").handler(basicAuthHandler);
 	    router.route("/Services/rest/blogs").handler(basicAuthHandler);
 	    router.route("/Services/rest/user/auth").handler(basicAuthHandler);
-		router.get("/Services/rest/company/:companyId/sites").handler(this::handleGetSitesOfCompany);
-		router.get("/Services/rest/company/:companyId/sites/:siteId/departments").handler(this::handleGetDepartmentsOfSite);
+	    router.get("/Services/rest/company/:companyId/sites").handler(this::handleGetSitesOfCompany);
+	    router.get("/Services/rest/company/:companyId/sites/:siteId/departments").handler(this::handleGetDepartmentsOfSite);
 		router.post("/Services/rest/user/register").handler(this::handlePerformRegistration);
 		router.get("/Services/rest/user").handler(this::handleLoadSignedInUser);
 		router.get("/Services/rest/blogs").handler(this::handleLoadBlogs);
 		router.post("/Services/rest/blogs").handler(this::handleNewBlog);
 		router.post("/Services/rest/blogs/:blogId/comments").handler(this::handleNewComment);
-		router.post("/Services/rest/blogs?tag=:tags").handler(this::handleSearchBlogs);
 		router.get("/Services/rest/company").handler(this::handleGetCompanies);
 		router.post("/Services/rest/user/auth").handler(this::handleLogin);
 		 configureMongoClient();
-		router.route().handler(StaticHandler.create().setCachingEnabled(false)::handle);
+		router.route().handler(StaticHandler.create().setCachingEnabled(false).setMaxAgeSeconds(60)::handle);
 		HttpServerOptions serverOptions = new HttpServerOptions().setSsl(true);
 		
 		vertx.createHttpServer().requestHandler(router::accept).listen(8080);	
@@ -116,7 +118,16 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 //	    authInfo.put(authProvider.getUsernameField(), username).put(authProvider.getPasswordField(), password);
 //	    return authInfo;
 //	  }
-	
+	private void shirorefresh() throws URISyntaxException{
+		ClassLoader loader = MyBlogSpotVerticle.class.getClassLoader();
+	    File res = new File(loader.getResource("vertx-users.properties").toURI());
+	    try {
+	    authProvider=	ShiroAuth.create(vertx,
+	          ShiroAuthRealmType.PROPERTIES,
+	          new JsonObject().put(PropertiesProviderConstants.PROPERTIES_PROPS_PATH_FIELD, res.getName()));
+	    } catch (Exception ignore) {
+	    }
+	}
 	@Override
 	public void stop(Future<Void> stopFuture){
 		System.out.println("MyRESTVerticle stopped");
@@ -136,7 +147,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 	       }
 	}
 	private void handleGetSitesOfCompany(RoutingContext routingContext) {	
-		System.out.println("session user:" + routingContext.user().principal());
+	//	System.out.println("session user:" + routingContext.user().principal());
 
 
 		client.findOne("company", new JsonObject().put("_id",routingContext.request().getParam("companyId") ),null, results -> {
@@ -164,7 +175,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 		}
 	
 	private void handleGetDepartmentsOfSite(RoutingContext routingContext) {
-		System.out.println("session user:" + routingContext.user().principal());
+	//	System.out.println("session user:" + routingContext.user().principal());
 		
 
 		client.findOne("site", new JsonObject().put("_id",routingContext.request().getParam("siteId") ),null, results -> {
@@ -230,7 +241,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 													.setStatusCode(201)
 													.putHeader("content-type", "application/json; charset=utf-8")
 													.end(Json.encodePrettily("success"));
-													
+
 												} else {
 													userSave.cause().printStackTrace();
 													routingContext.response()
@@ -274,16 +285,16 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 								routingContext.getBodyAsJson().getValue("last").toString(),companyres,site,dept);
 						client.save("user",newUser.toJson(),res->{
 							  if (res.succeeded()) {
-								  shiroUpdate(newUser.getUserName(),newUser.getPassword());
-									 routingContext.response()
-								      .setStatusCode(201)
-								      .putHeader("content-type", "application/json; charset=utf-8")
-								      .end(Json.encodePrettily("success"));
+									shiroUpdate(newUser.getUserName(),newUser.getPassword());
+									routingContext.response()
+									.setStatusCode(201)
+									.putHeader("content-type", "application/json; charset=utf-8")
+									.end(Json.encodePrettily("success"));
 							  } else {
 							    res.cause().printStackTrace();
 							    routingContext.response()
 							    .setStatusCode(400)
-							    .end(Json.encodePrettily("failed"));
+							    .end();
 							  }
 						});
 
@@ -377,11 +388,18 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 	}
 	
 	private void handleLoadBlogs(RoutingContext routingContext) {
-		System.out.println("session user:" + routingContext.user().principal());
-		client.find("blogs", new JsonObject().put("type","blog") , results -> {
+		String tags = routingContext.request().getParam("tag");
+		JsonObject query;
+		System.out.println("session user:" + routingContext.user().principal() + "\n"+tags);	
+		if ( tags ==null || tags.trim().isEmpty() ){
+		query = new JsonObject().put("type","blog");}
+		else
+		{
+			query = new JsonObject().put("type","blog").put("tags",tags);
+		}
+		client.find("blogs", query , results -> {
 		
 		if (results.succeeded()){	
-			System.out.println(results.result()+"\n");
 			List<JsonObject> objects = results.result();
 
 		List<BlogEntry> blogs = objects.stream().map(BlogEntry::new).collect(Collectors.toList());
@@ -414,7 +432,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 	}
 	private void handleNewComment(RoutingContext routingContext) {
 		String username =routingContext.user().principal().getString("username");
-		System.out.println(username+"\n"+routingContext.request().getParam("blogId"));
+	//	System.out.println(username+"\n"+routingContext.request().getParam("blogId"));
 		client.findOne("blogs", new JsonObject().put("_id",routingContext.request().getParam("blogId")),null , results -> {
 				if (results.succeeded()){
 					BlogEntry blog = new BlogEntry(results.result());
@@ -436,7 +454,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 				});
 				client.save("blogs",blog.toJson(),blogsave->{
 					if (blogsave.succeeded()){
-						routingContext.response().putHeader("content-type", "application/json").end(" blog success");		
+						routingContext.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json").end();		
 					}
 					else {	routingContext.response().setStatusCode(401).end();}
 				});
@@ -453,7 +471,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 		
 	}
 	private void handleNewBlog(RoutingContext routingContext) {
-		System.out.println("session user:" + routingContext.user().principal());
+
 		String username = routingContext.user().principal().getString("username");
 		client.findOne("user", new JsonObject().put("userName",username),null, res ->{
 			if (res.succeeded()){
@@ -466,7 +484,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 					);			
 			client.save("blogs",blog.toJson(),blogsave->{
 				if (blogsave.succeeded()){
-					routingContext.response().putHeader("content-type", "application/json").end("success");		
+					routingContext.response().putHeader(HttpHeaders.CONTENT_TYPE, "application/json").end();		
 				}
 				else {				routingContext.response().setStatusCode(401).end();}
 			});
@@ -482,7 +500,6 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 	}
 	
 	private void handleGetCompanies(RoutingContext routingContext) {
-		//System.out.println("session user:" + routingContext.user().principal());
 		JsonArray resJson = new JsonArray();
 		client.find("company", new JsonObject() , results -> {
 			if (results.succeeded()){
@@ -512,48 +529,9 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 
 	
 	}
-	
-	private void handleSearchBlogs(RoutingContext routingContext){
-		String tag = routingContext.request().getParam("tags");
-		System.out.println("asd\n"+tag);
-		client.find("blogs", new JsonObject().put("type","blog") , results -> {
-		
-		if (results.succeeded()){	
-			System.out.println(results.result()+"\n");
-			List<JsonObject> objects = results.result();
 
-		List<BlogEntry> blogs = objects.stream().map(BlogEntry::new).collect(Collectors.toList());
-		JsonArray resJson = new JsonArray();
-		int i;
-		for (i=0;i<blogs.size();i++){
-			resJson.add(
-					new JsonObject()
-					.put("id", blogs.get(i).getId())
-					.put("content",blogs.get(i).getContent())
-					.put("tags",blogs.get(i).getTags().toString())
-					.put("title",blogs.get(i).getTitle())
-					.put("userFirst", blogs.get(i).getUser().getFirst())
-					.put("userLast", blogs.get(i).getUser().getLast())
-					.put("userId",blogs.get(i).getUser().getId().toString())
-					.put("date",blogs.get(i).getDate())
-					.put("comments",resolveBlogEntry(blogs.get(i).getComments()))
-					);
-			
-		}
-		routingContext.response().putHeader("content-type", "application/json").end(resJson.encode());		
-		//routingContext.response().setStatusCode(401).end();
-		}
-		else {
-			routingContext.response().setStatusCode(401).end();
-		}
-		
-		}
-				);
-	}
-	
 	//Will not work since the current UI code is sending the username and password in the POST payload and not in the Auth header
 	private void handleLogin(RoutingContext routingContext) {
-		System.out.println("session user:" + routingContext.user().principal());
 
 		JsonObject reqPayload = new JsonObject(routingContext.getBodyAsString());
 		if ( reqPayload.containsKey("userName") == false || reqPayload.containsKey("password") == false) {
@@ -563,7 +541,12 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 		JsonObject authInfo = new JsonObject()
 				.put("username", reqPayload.getString("userName"))
 				.put("password", reqPayload.getString("password"));
-
+		try {
+			shirorefresh();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	    authProvider.authenticate(authInfo, res -> {
 	      if (res.succeeded()) {
 	    	  System.out.println("Success");
