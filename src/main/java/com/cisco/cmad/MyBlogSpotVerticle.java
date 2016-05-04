@@ -414,29 +414,29 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 	}
 	private void handleNewComment(RoutingContext routingContext) {
 		String username =routingContext.user().principal().getString("username");
-		
-		client.findOne("blogs", new JsonObject().put("_id",routingContext.request().getParam("id")),null , results -> {
+		System.out.println(username+"\n"+routingContext.request().getParam("blogId"));
+		client.findOne("blogs", new JsonObject().put("_id",routingContext.request().getParam("blogId")),null , results -> {
 				if (results.succeeded()){
 					BlogEntry blog = new BlogEntry(results.result());
 
-		client.findOne("user", new JsonObject().put("username",username),null, res ->{
+		client.findOne("user", new JsonObject().put("userName",username),null, res ->{
 			if (res.succeeded()){
 				BlogUsers bloguser = new BlogUsers(res.result());
 				BlogEntry comment = new BlogEntry(routingContext.getBodyAsJson().getValue("content").toString(),
-						routingContext.getBodyAsJson().getValue("tags").toString(),
-						routingContext.getBodyAsJson().getValue("title").toString(),
+						"",
+						"",
 						bloguser,"comment"
 						);
 				blog.addComment(comment);
 				client.save("blogs",comment.toJson(),blogsave->{
 					if (blogsave.succeeded()){
-						routingContext.response().putHeader("content-type", "application/json").end("success");		
+						
 					}
 					else {				routingContext.response().setStatusCode(401).end();}
 				});
 				client.save("blogs",blog.toJson(),blogsave->{
 					if (blogsave.succeeded()){
-						routingContext.response().putHeader("content-type", "application/json").end("success");		
+						routingContext.response().putHeader("content-type", "application/json").end(" blog success");		
 					}
 					else {	routingContext.response().setStatusCode(401).end();}
 				});
