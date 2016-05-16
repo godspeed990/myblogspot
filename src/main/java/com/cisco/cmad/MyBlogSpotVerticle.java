@@ -94,7 +94,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 		router.route().handler(StaticHandler.create().setCachingEnabled(false).setMaxAgeSeconds(60)::handle);
 		HttpServerOptions serverOptions = new HttpServerOptions().setSsl(true);
 		
-		vertx.createHttpServer().requestHandler(router::accept).listen(8080);	
+		vertx.createHttpServer().requestHandler(router::accept).listen(8999);	
 		
 		//configureMongoClient();
 		
