@@ -151,7 +151,8 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 
 
 		client.findOne("company", new JsonObject().put("_id",routingContext.request().getParam("companyId") ),null, results -> {
-			if (results.succeeded()) {
+			if (results.succeeded() && results.result() !=null) {
+
 				Company company = new Company(results.result());
 				int i;
 				JsonArray resJson = new JsonArray();
@@ -180,7 +181,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 
 		client.findOne("site", new JsonObject().put("_id",routingContext.request().getParam("siteId") ),null, results -> {
 
-				if (results.succeeded()) {
+				if (results.succeeded() && results.result() !=null) {
 					Site site = new Site(results.result());
 					int i;
 					JsonArray resJson = new JsonArray();
@@ -206,8 +207,17 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 	}
 	
 	private void handlePerformRegistration(RoutingContext routingContext) {
-		
-		boolean isCompany = routingContext.getBodyAsJson().getValue("isCompany").toString().equals("true");		
+	if (routingContext.getBody() !=null ){	
+		boolean isCompany;
+		try{
+		 isCompany = routingContext.getBodyAsJson().getValue("isCompany").toString().equals("true");	}
+		catch( Exception e){
+			isCompany = false;
+		    routingContext.response()
+		    .setStatusCode(400)
+		    .end();
+		    return ;
+		}
 		 Dept ndept ;  
 	if (isCompany){
 		ndept = new Dept(routingContext.getBodyAsJson().getValue("deptName").toString());
@@ -318,7 +328,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 
 		}
 
-		
+	}
 	}
 
 	
@@ -502,7 +512,7 @@ public class MyBlogSpotVerticle extends AbstractVerticle{
 	private void handleGetCompanies(RoutingContext routingContext) {
 		JsonArray resJson = new JsonArray();
 		client.find("company", new JsonObject() , results -> {
-			if (results.succeeded()){
+			if (results.succeeded() && results.result() !=null){
 				int i;
 				 List<JsonObject> objects = results.result();
 			     List<Company> list = objects.stream().map(Company::new).collect(Collectors.toList());
